@@ -13,3 +13,6 @@ db.sqlite3
 .idea/
 
 *.log
+
+media/
+staticfiles/
