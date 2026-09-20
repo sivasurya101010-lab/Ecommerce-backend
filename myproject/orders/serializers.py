@@ -5,7 +5,7 @@ class OrderItemSerialiZer(serializers.ModelSerializer):
 
     product_name=serializers.CharField(source='product.name',read_only=True)
 
-    class Mets:
+    class Meta:
         model=OrderItem
         fields = ['id','product_name','quantity','price']
         

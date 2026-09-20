@@ -1,6 +1,6 @@
 from .seriaizers import CartItemSerialiser
 
-from .models import Cart,CartIteam
+from .models import Cart,CartItem
 from products.models import Product
 
 from rest_framework.views import APIView
@@ -19,26 +19,36 @@ class AddCartView(APIView):
         product_id=request.data.get('product_id')
         quantity=request.data.get('quantity')
 
+        try:
+            quantity=int(quantity)
+        except (TypeError,ValueError):
+            return Response({"error":"Quantity must be a valid number"},status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity<=0:
+            return Response({"error":"Quantity must be at least 1"},status=status.HTTP_400_BAD_REQUEST)
 
         product=get_object_or_404(Product,id=product_id)
 
         if quantity>product.stock:
-            return Response({"error":"out of stock"},status=400)
-        
-        
+            return Response({"error":"out of stock"},status=status.HTTP_400_BAD_REQUEST)
+
+
         cart,created=Cart.objects.get_or_create(user=request.user)
-        cart_item,created=CartIteam.objects.get_or_create(cart=cart,product=product)
+        cart_item,created=CartItem.objects.get_or_create(cart=cart,product=product)
 
         if not created:
-           cart_item.quantity+=int(quantity)
+
+            if cart_item.quantity+quantity>product.stock:
+                return Response({"error":"Not enough stocks"},status=status.HTTP_400_BAD_REQUEST)
+
+            cart_item.quantity+=quantity
 
         else:
-            cart_item.quantity=int(quantity)
+            cart_item.quantity=quantity
 
         cart_item.save()
 
-        return Response({"message": "Item added to cart"},status=status.HTTP_400_BAD_REQUEST)
-        
+        return Response({"message": "Item added to cart"},status=status.HTTP_200_OK)
 
 
 
@@ -58,7 +68,6 @@ class ItemCartView(APIView):
             total+=item.product.price*item.quantity
 
         return Response({'items':serializer.data,'total':total})
-    
 
 
 class UpdateCartView(APIView):
@@ -66,17 +75,19 @@ class UpdateCartView(APIView):
 
     def patch(self,request,id):
 
-        quantity=int(request.data.get('quantity'))
+        try:
+            quantity=int(request.data.get('quantity'))
+        except (TypeError,ValueError):
+            return Response({"error":"Quantity must be a valid number"},status=status.HTTP_400_BAD_REQUEST)
 
         if quantity<=0:
-            return Response({"error":"Add minimum 1 item to the cart"}),
-        status=400
+            return Response({"error":"Add minimum 1 item to the cart"},status=status.HTTP_400_BAD_REQUEST)
 
-        item=get_object_or_404(CartIteam, id=id, cart__user=request.user)
+        item=get_object_or_404(CartItem,id=id,cart__user=request.user)
 
         if quantity>item.product.stock:
             return Response({"error":"Not enough stocks"},status=status.HTTP_400_BAD_REQUEST)
-        
+
         item.quantity=quantity
 
         item.save()
@@ -84,35 +95,26 @@ class UpdateCartView(APIView):
         return Response({"message":"Cart updated"})
 
 
-
-
 class RemoveItemCartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self,request,id):
-        item=CartIteam.objects.get(id=id,cart__user=request.user)
+        item=get_object_or_404(CartItem,id=id,cart__user=request.user)
 
         item.delete()
 
         return Response({"message":"Item removed"})
 
 
-
-
 class ClearCartView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self,request):
-        cart=Cart.objects.get(user=request.user)
+        cart=Cart.objects.filter(user=request.user).first()
 
-        items=cart.items.all() #reverse relation
-
-        items.delete()
+        if cart:
+            items=cart.items.all() #reverse relation
+            items.delete()
 
         return Response({"message": "Cart cleared"})
-
-
-
-
-
 

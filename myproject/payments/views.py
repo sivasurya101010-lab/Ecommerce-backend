@@ -15,9 +15,7 @@ client = razorpay.Client(
 
 class CreatePaymentView(APIView):
 
-    permission_classes = [
-        IsAuthenticated
-    ]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
@@ -33,48 +31,35 @@ class CreatePaymentView(APIView):
 
         return Response({"razorpay_order_id":razorpay_order["id"],"amount":amount,"currency":"INR","key":settings.RAZORPAY_KEY_ID})
 
+
 class VerifyPaymentView(APIView):
 
-    permission_classes = [
-        IsAuthenticated
-    ]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
         data = {
 
-            'razorpay_order_id':
-            request.data.get(
-                'razorpay_order_id'
-            ),
+            'razorpay_order_id':request.data.get('razorpay_order_id'),
 
-            'razorpay_payment_id':
-            request.data.get(
-                'razorpay_payment_id'
-            ),
+            'razorpay_payment_id':request.data.get('razorpay_payment_id'),
 
-            'razorpay_signature':
-            request.data.get(
-                'razorpay_signature'
-            )
+            'razorpay_signature':request.data.get('razorpay_signature')
         }
+
+        if not data['razorpay_order_id'] or not data['razorpay_payment_id'] or not data['razorpay_signature']:
+
+            return Response({"error":"Payment details are required"},status=400)
 
         try:
 
-            client.utility.verify_payment_signature(
-                data
-            )
+            client.utility.verify_payment_signature(data)
 
-            payment = Payment.objects.get(
-                razorpay_order_id=
-                data['razorpay_order_id']
-            )
+            payment = get_object_or_404(Payment,razorpay_order_id=data['razorpay_order_id'],order__user=request.user)
 
             payment.status = 'SUCCESS'
 
-            payment.razorpay_payment_id = (
-                data['razorpay_payment_id']
-            )
+            payment.razorpay_payment_id = (data['razorpay_payment_id'])
 
             payment.save()
 
@@ -82,17 +67,8 @@ class VerifyPaymentView(APIView):
 
             payment.order.save()
 
-            return Response({
-                "message":
-                "Payment successful"
-            })
+            return Response({"message":"Payment successful"})
 
-        except:
+        except Exception:
 
-            return Response(
-                {
-                    "error":
-                    "Payment verification failed"
-                },
-                status=400
-            )
+            return Response({"error":"Payment verification failed"},status=400)

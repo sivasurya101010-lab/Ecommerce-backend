@@ -57,7 +57,9 @@ class CheckoutView(APIView):
 
             return Response(serializer.data,status=201)
 
+
 class MyOrdersView(APIView):
+
     permission_classes=[IsAuthenticated]
 
 
@@ -67,14 +69,15 @@ class MyOrdersView(APIView):
         serializer=OrderSerializer(orders,many=True)
 
         return Response(serializer.data)
-    
 
-    
+
 class MyordersDetailView(APIView):
 
-    authentication_classes=[IsAuthenticated]
+    permission_classes=[IsAuthenticated]
 
     def get(self,request,id):
-        order=get_object_or_404(Order,id=id)
+        order=get_object_or_404(Order,id=id,user=request.user)
 
         serializer=OrderSerializer(order)
+
+        return Response(serializer.data)

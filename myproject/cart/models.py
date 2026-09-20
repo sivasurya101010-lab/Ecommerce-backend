@@ -4,16 +4,17 @@ from products.models import Product
 
 
 class Cart(models.Model):
-    user=models.OneToOneField(User,on_delete=models.CASCADE)
-    created_at=models.DateField(auto_now_add=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):
-        return f"(self.user.username)'s cart"
+        return f"{self.user.username}'s cart"
+
 
 class CartItem(models.Model):
-    Product=models.ForeignKey(Product,on_delete=models.CASCADE)
-    cart=models.ForeignKey(Cart,on_delete=models.CASCADE,related_name='items')
-    quantity=models.PositiveIntegerField(default=1)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-        self.Product.name
+        return self.product.name
