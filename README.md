@@ -54,6 +54,7 @@ Ecommerce-backend/
 │   │
 │   ├── cart/
 │   │   ├── models.py
+│   │   ├── seriaizers.py
 │   │   ├── views.py
 │   │   ├── urls.py
 │   │   └── tests.py
@@ -77,13 +78,14 @@ Ecommerce-backend/
 │   │   ├── asgi.py
 │   │   └── wsgi.py
 │   │
-│   └── manage.py
+│   ├── manage.py
+│   └── requirements.txt
 │
 ├── .gitignore
 └── README.md
 ```
 
-## API Modules
+## API Endpoints
 
 ### Authentication
 
@@ -95,46 +97,83 @@ Ecommerce-backend/
 
 ### Products
 
-| Method    | Endpoint                   | Description              |
-| --------- | -------------------------- | ------------------------ |
-| GET       | `/products/categories/`    | List categories          |
-| GET       | `/products/productList/`   | List products            |
-| GET       | `/products/productDetail/` | Retrieve product details |
-| PUT/PATCH | `/products/productEdit/`   | Edit product information |
+| Method    | Endpoint                | Description              |
+| --------- | ----------------------- | ------------------------ |
+| GET       | `/products/categories/` | List categories          |
+| GET       | `/products/`            | List products            |
+| GET       | `/products/<id>/`       | Retrieve product details |
+| PUT/PATCH | `/products/edit/<id>/`  | Edit product             |
+| DELETE    | `/products/edit/<id>/`  | Delete product           |
 
-Product listing supports filtering, searching, and ordering through Django REST Framework filter backends.
+The product list API supports:
+
+* Category filtering
+* Availability filtering
+* Searching by product name and description
+* Ordering by price
+* Ordering by creation date
+* Minimum price filtering
+* Maximum price filtering
+
+Example:
+
+```text
+/products/?category=1
+/products/?is_available=true
+/products/?search=phone
+/products/?ordering=price
+/products/?min_price=100
+/products/?max_price=1000
+```
 
 ### Cart
 
-The cart module provides functionality for:
+| Method | Endpoint             | Description               |
+| ------ | -------------------- | ------------------------- |
+| POST   | `/cart/add/`         | Add product to cart       |
+| GET    | `/cart/`             | View cart                 |
+| PATCH  | `/cart/update/<id>/` | Update cart item quantity |
+| DELETE | `/cart/remove/<id>/` | Remove cart item          |
+| DELETE | `/cart/clear/`       | Clear cart                |
 
-* Adding products to the cart
-* Viewing cart items
-* Updating cart quantities
-* Removing individual cart items
-* Clearing the cart
+Cart endpoints require authentication.
+
+Example request for adding an item:
+
+```json
+{
+    "product_id": 1,
+    "quantity": 2
+}
+```
 
 ### Orders
 
-The order module provides:
+| Method | Endpoint            | Description               |
+| ------ | ------------------- | ------------------------- |
+| POST   | `/orders/checkout/` | Create an order from cart |
+| GET    | `/orders/`          | View user's orders        |
+| GET    | `/orders/<id>/`     | View order details        |
 
-* Checkout
-* Creating orders from cart items
-* Viewing the user's orders
-* Viewing order details
+Order endpoints require authentication.
 
 ### Payments
 
-The payment module integrates with **Razorpay** and provides endpoints for:
+| Method | Endpoint                | Description             |
+| ------ | ----------------------- | ----------------------- |
+| POST   | `/api/payments/create/` | Create Razorpay payment |
+| POST   | `/api/payments/verify/` | Verify Razorpay payment |
 
-* Creating a payment
-* Verifying a payment
+Payment endpoints require authentication.
 
 ## Authentication
 
 The API uses **JWT authentication** through `djangorestframework-simplejwt`.
 
-After successful login, the API returns an access token and refresh token.
+After successful login, the API returns:
+
+* Access token
+* Refresh token
 
 For protected endpoints, include the access token in the request:
 
@@ -147,11 +186,17 @@ Authorization: Bearer <access_token>
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ecommerce-backend.git
-cd ecommerce-backend
+git clone https://github.com/sivasurya101010-lab/Ecommerce-backend.git
+cd Ecommerce-backend
 ```
 
-### 2. Create a virtual environment
+### 2. Go to the Django project directory
+
+```bash
+cd myproject
+```
+
+### 3. Create a virtual environment
 
 Windows:
 
@@ -165,15 +210,15 @@ Activate it:
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+### 4. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 5. Configure environment variables
 
-Create a `.env` file in the project directory.
+Create a `.env` file inside the `myproject` directory.
 
 Example:
 
@@ -185,19 +230,19 @@ RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 
 Do not commit the `.env` file to GitHub.
 
-### 5. Run migrations
+### 6. Run migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 6. Create an admin user
+### 7. Create an admin user
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 7. Start the development server
+### 8. Start the development server
 
 ```bash
 python manage.py runserver
@@ -233,13 +278,29 @@ Send access token with protected requests
 Refresh token when access token expires
 ```
 
+## Checkout Flow
+
+The checkout process works as follows:
+
+```text
+User adds products to cart
+          ↓
+       View cart
+          ↓
+      Checkout
+          ↓
+      Create Order
+          ↓
+   Reduce product stock
+          ↓
+       Clear cart
+```
+
 ## Payment Flow
 
 The payment process is designed around Razorpay:
 
 ```text
-User Checkout
-      ↓
 Create Order
       ↓
 Create Razorpay Payment
@@ -248,7 +309,9 @@ Complete Payment
       ↓
 Verify Payment
       ↓
-Update Payment / Order Status
+Update Payment Status
+      ↓
+Update Order Status
 ```
 
 ## Database
@@ -259,9 +322,9 @@ The database can be changed to PostgreSQL or another relational database by upda
 
 ## Security
 
-Sensitive credentials should be stored using environment variables.
+Sensitive credentials are stored using environment variables.
 
-The following files should not be committed:
+The following files and directories should not be committed:
 
 ```text
 .env
@@ -269,6 +332,8 @@ db.sqlite3
 venv/
 __pycache__/
 ```
+
+These are already included in `.gitignore`.
 
 ## Future Improvements
 
@@ -283,7 +348,8 @@ Possible future improvements include:
 * CI/CD pipeline
 * Production deployment
 * Improved product image handling
-* Pagination and advanced filtering
+* Pagination
+* Advanced filtering
 * Email notifications
 * Inventory management
 
